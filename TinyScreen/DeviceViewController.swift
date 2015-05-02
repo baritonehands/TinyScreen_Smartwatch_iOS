@@ -1,5 +1,5 @@
 //
-//  DetailViewController.swift
+//  DeviceViewController.swift
 //  TinyScreen
 //
 //  Created by Brian Gregg on 5/1/15.
@@ -8,7 +8,7 @@
 
 import UIKit
 
-class DetailViewController: UIViewController {
+class DeviceViewController: UIViewController {
 
     @IBOutlet weak var detailDescriptionLabel: UILabel!
 

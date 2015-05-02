@@ -1,5 +1,5 @@
 //
-//  MasterViewController.swift
+//  DeviceListViewController.swift
 //  TinyScreen
 //
 //  Created by Brian Gregg on 5/1/15.
@@ -7,12 +7,14 @@
 //
 
 import UIKit
+import CoreBluetooth
 
-class MasterViewController: UITableViewController {
+class DeviceListViewController: UITableViewController, CBCentralManagerDelegate {
 
-    var detailViewController: DetailViewController? = nil
-    var objects = [AnyObject]()
-
+    var detailViewController: DeviceViewController? = nil
+    var devices = [CBPeripheral]()
+    lazy var centralManager: CBCentralManager = CBCentralManager(delegate: self, queue: nil)
+    var scanEnabled = false
 
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -24,24 +26,27 @@ class MasterViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        self.navigationItem.leftBarButtonItem = self.editButtonItem()
 
-        let addButton = UIBarButtonItem(barButtonSystemItem: .Add, target: self, action: "insertNewObject:")
+        let addButton = UIBarButtonItem(title: "Scan", style: .Done, target: self, action: "startScan:")
         self.navigationItem.rightBarButtonItem = addButton
         if let split = self.splitViewController {
             let controllers = split.viewControllers
-            self.detailViewController = controllers[controllers.count-1].topViewController as? DetailViewController
+            self.detailViewController = controllers[controllers.count-1].topViewController as? DeviceViewController
         }
+        self.navigationItem.rightBarButtonItem?.enabled = centralManager.state == .PoweredOn
     }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
+    
+    func startScan(sender: AnyObject) {
+        centralManager.scanForPeripheralsWithServices(nil, options: nil)
+    }
 
     func insertNewObject(sender: AnyObject) {
-        objects.insert(NSDate(), atIndex: 0)
+        //devices.insert(NSDate(), atIndex: 0)
         let indexPath = NSIndexPath(forRow: 0, inSection: 0)
         self.tableView.insertRowsAtIndexPaths([indexPath], withRowAnimation: .Automatic)
     }
@@ -51,11 +56,12 @@ class MasterViewController: UITableViewController {
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "showDetail" {
             if let indexPath = self.tableView.indexPathForSelectedRow() {
-                let object = objects[indexPath.row] as! NSDate
-                let controller = (segue.destinationViewController as! UINavigationController).topViewController as! DetailViewController
-                controller.detailItem = object
+                let device = devices[indexPath.row]
+                let controller = (segue.destinationViewController as! UINavigationController).topViewController as! DeviceViewController
+                controller.detailItem = device
                 controller.navigationItem.leftBarButtonItem = self.splitViewController?.displayModeButtonItem()
                 controller.navigationItem.leftItemsSupplementBackButton = true
+                centralManager.stopScan()
             }
         }
     }
@@ -67,31 +73,41 @@ class MasterViewController: UITableViewController {
     }
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return objects.count
+        return devices.count
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as! UITableViewCell
 
-        let object = objects[indexPath.row] as! NSDate
-        cell.textLabel!.text = object.description
+        let device = devices[indexPath.row]
+        cell.textLabel!.text = device.name ?? "Unknown"
         return cell
     }
 
     override func tableView(tableView: UITableView, canEditRowAtIndexPath indexPath: NSIndexPath) -> Bool {
         // Return false if you do not want the specified item to be editable.
-        return true
+        return false
     }
 
     override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
         if editingStyle == .Delete {
-            objects.removeAtIndex(indexPath.row)
+            devices.removeAtIndex(indexPath.row)
             tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
         } else if editingStyle == .Insert {
             // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
         }
     }
+    
+    // MARK: - Central Manager
 
-
+    func centralManagerDidUpdateState(central: CBCentralManager!) {
+        self.navigationItem.rightBarButtonItem?.enabled = central.state == .PoweredOn
+    }
+    
+    func centralManager(central: CBCentralManager!, didDiscoverPeripheral peripheral: CBPeripheral!, advertisementData: [NSObject : AnyObject]!, RSSI: NSNumber!) {
+        devices.append(peripheral)
+        tableView.reloadData()
+        //println("\(advertisementData)")
+    }
 }
 
