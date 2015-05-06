@@ -11,6 +11,8 @@ import CoreBluetooth
 
 class DeviceListViewController: UITableViewController, CBCentralManagerDelegate {
 
+    static let uartServiceUUID = CBUUID(string: "6e400001-b5a3-f393-e0a9-e50e24dcca9e")
+    
     var detailViewController: DeviceViewController? = nil
     var devices = [CBPeripheral]()
     lazy var centralManager: CBCentralManager = CBCentralManager(delegate: self, queue: nil)
@@ -42,13 +44,7 @@ class DeviceListViewController: UITableViewController, CBCentralManagerDelegate 
     }
     
     func startScan(sender: AnyObject) {
-        centralManager.scanForPeripheralsWithServices(nil, options: nil)
-    }
-
-    func insertNewObject(sender: AnyObject) {
-        //devices.insert(NSDate(), atIndex: 0)
-        let indexPath = NSIndexPath(forRow: 0, inSection: 0)
-        self.tableView.insertRowsAtIndexPaths([indexPath], withRowAnimation: .Automatic)
+        centralManager.scanForPeripheralsWithServices([DeviceListViewController.uartServiceUUID], options: nil)
     }
 
     // MARK: - Segues
@@ -61,6 +57,7 @@ class DeviceListViewController: UITableViewController, CBCentralManagerDelegate 
                 controller.detailItem = device
                 controller.navigationItem.leftBarButtonItem = self.splitViewController?.displayModeButtonItem()
                 controller.navigationItem.leftItemsSupplementBackButton = true
+                device.delegate = controller
                 centralManager.stopScan()
             }
         }
@@ -88,14 +85,12 @@ class DeviceListViewController: UITableViewController, CBCentralManagerDelegate 
         // Return false if you do not want the specified item to be editable.
         return false
     }
-
-    override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
-        if editingStyle == .Delete {
-            devices.removeAtIndex(indexPath.row)
-            tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
-        } else if editingStyle == .Insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
-        }
+    
+    override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+        centralManager.stopScan()
+        
+        var device = devices[indexPath.row]
+        centralManager.connectPeripheral(device, options: nil)
     }
     
     // MARK: - Central Manager
@@ -108,6 +103,10 @@ class DeviceListViewController: UITableViewController, CBCentralManagerDelegate 
         devices.append(peripheral)
         tableView.reloadData()
         //println("\(advertisementData)")
+    }
+    
+    func centralManager(central: CBCentralManager!, didConnectPeripheral peripheral: CBPeripheral!) {
+        performSegueWithIdentifier("showDetail", sender: self)
     }
 }
 
