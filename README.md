@@ -1,4 +1,5 @@
 TinyScreen Smartwatch iOS App
+=============================
 
 Incomplete, but able to sync with [TinyScreen_Smartwatch](https://codebender.cc/sketch:91833#TinyScreen_Smartwatch.ino). Time updates properly.
 
